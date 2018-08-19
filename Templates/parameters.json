@@ -1,0 +1,81 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "databaseName": {
+            "value": "vibratotestapp"
+        },
+        "administratorLogin": {
+            "value": "dbuser"
+        },
+        "administratorLoginPassword": {
+            "value": null
+        },
+        "mysqLocation": {
+            "value": "Australia East"
+        },
+        "serverName": {
+            "value": "vibratotestapp-adam"
+        },
+        "skuCapacity": {
+            "value": 1
+        },
+        "skuFamily": {
+            "value": "Gen5"
+        },
+        "skuName": {
+            "value": "B_Gen5_1"
+        },
+        "skuSizeMB": {
+            "value": 5120
+        },
+        "skuTier": {
+            "value": "Basic"
+        },
+        "storageMB": {
+            "value": 5120
+        },
+        "backupRetentionDays": {
+            "value": 7
+        },
+        "geoRedundantBackup": {
+            "value": "Disabled"
+        },
+        "version": {
+            "value": "10"
+        },
+        "collation": {
+            "value": "en_US.utf8"
+        },
+        "charset": {
+            "value": "utf8"
+        },
+        "name": {
+            "value": "VibratoTestApp-Adam"
+        },
+        "hostingPlanName": {
+            "value": "VibratoTestApp-Adam"
+        },
+        "hostingEnvironment": {
+            "value": ""
+        },
+        "location": {
+            "value": "Australia East"
+        },
+        "sku": {
+            "value": "Free"
+        },
+        "workerSize": {
+            "value": "0"
+        },
+        "serverFarmResourceGroup": {
+            "value": "VibratoTestApp-Adam"
+        },
+        "skuCode": {
+            "value": "F1"
+        },
+        "subscriptionId": {
+            "value": "75be1def-e48b-4b43-bacf-eb9bd676b7ba"
+        }
+    }
+}
