@@ -24,11 +24,10 @@ Notice line 50 in db/db.go needed a default database specified, in this case jus
 ### Setup Custom Build
 
 Initial approach attempted was to use a VSTS project with a custom GO build definition stored in YAML feeding a release pipeline to perform the deployment. I forked the TechTestApp to my own account, to have CI builds from it integrated with VSTS.
-```
-Super Hint: Never try to fork a Go app on github, it can't reference its own local files as they are hardcoded to the original github account, took me a few hours to realise this. 
 
-*sigh*
-```
+>**Super Hint:** Never try to fork a Go app on github, it can't reference its own local files as they are hardcoded to the original github account, took me a few hours to realise this. 
+>*sigh*
+
 My own custom build was initially needed as I had to modify the code in 2 ways:
 
 1. Fix the afore mentioned bug
