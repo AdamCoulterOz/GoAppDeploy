@@ -43,14 +43,22 @@ I had actually gotten the stateless build agent installing go, setting up dep, c
 
 I was then left with choosing whether to continue to pursue using VSTS to do the Release pipeline on its own now I dont need to rebuilt the app myself. This approach would have required too much UI setup for the marker to configure their own VSTS account before importing build & release configurations, so abandoned it in favour of similar PS scripts which can have subscription credentials typed in.
 
-I did lose the ability to have a continuous deployment pipeline  by abandoning VSTS, but I've been at this a week now (around a full time job, annual performance processes, crazy home life, crazy health issues and no sleep...) and don't have time left to work more on this. Ideally I would use VSTS to manage all DevOps lifecycles with apps on Azure. There is so much out-of-the-box that you can do things in a few minutes.
+I did lose the ability to have a continuous deployment pipeline by abandoning VSTS, but I've been at this a week now (around a full time job, annual performance processes, crazy home life, crazy health issues and no sleep...) and don't have time left to work more on this. Ideally I would use VSTS to manage all DevOps lifecycles with apps on Azure. There is so much out-of-the-box that you can do things in a few minutes.
 
 ## Deployment Code ... Finally
 
-I have created this repo with the Azure ARM templates, and the PowerShell scripts needed to do the deployment. It follows these steps:
+I have created this repo with the Azure ARM templates, and the PowerShell scripts needed to do the deployment.
+
+Initially I was unsure how to deploy a Go app which has it's own listener daemon on Azure App Service Web Apps. Usually Azure Web Apps handle the hosting layer for you. I found a way to work around this by using the Microsoft IIS HttpPlatformHandler which is basically just requires you to specify a configuration file (web.config) which maps the Web App hosting to your listener endpoint, while retaining all the goodies of scaling on App Service Web Apps like security, load balancing, autoscaling, and automated management.
+
+I have run into an issue though as the port the HttpPlatformHandler runs the wrapped service on is assigned arbitrarily at instantiation. Currently the Vibrto TechTestApp doesn't allow you to pass this as a runtime argument or specify it as a local environment variable (the 2 ways the HttpPlatformHandler supports passing this value). So I've raised a feature request to the Vibrato repo to add something like this, as it would probably be valuable for other hosting scenarios too.
+
+https://github.com/vibrato/TechTestApp/issues/21
+
+Artefacts in deployment:
 
 1. **getLatestArtefact.ps1** - pulls the latest artefact from Vibrato's TechTestApp releases. I use the win64 version as I'm hosting on Azure App Service.
-2. 
+2. **web.config** - bootstraps custom listener daemons on Azure Web Apps - uses the IIS HttpPlatformHandler.
 3. 
 4. 
 
