@@ -55,6 +55,11 @@ I ran into an issue where the port the HttpPlatformHandler assigns the wrapped s
 
 https://github.com/vibrato/TechTestApp/issues/21
 
+Problem number ... 7? Found a bug with the HttpPlatformHandler now. When mapping environment variables it adds random whitespace to the end of the value.... this causes the go app to fail :-/ I can't win.
+
+https://social.msdn.microsoft.com/Forums/windowsserver/en-US/f34dfb44-b67d-46b9-8401-1eb5a2aafcda/unnecessary-space-is-attached-to-the-expansion-result-of-httpplatformport?forum=windowsazurewebsitespreview
+
+
 Artefacts in deployment:
 
 1. **getLatestArtefact.ps1** - pulls the latest artefact from Vibrato's TechTestApp releases. I use the win64 version as I'm hosting on Azure App Service.
