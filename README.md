@@ -51,7 +51,7 @@ I have created this repo with the Azure ARM templates, and the PowerShell script
 
 Initially I was unsure how to deploy a Go app which has it's own listener daemon on Azure App Service Web Apps. Usually Azure Web Apps handle the hosting layer for you. I found a way to work around this by using the Microsoft IIS HttpPlatformHandler which is basically just requires you to specify a configuration file (web.config) which maps the Web App hosting to your listener endpoint, while retaining all the goodies of scaling on App Service Web Apps like security, load balancing, autoscaling, and automated management.
 
-I have run into an issue though as the port the HttpPlatformHandler runs the wrapped service on is assigned arbitrarily at instantiation. Currently the Vibrto TechTestApp doesn't allow you to pass this as a runtime argument or specify it as a local environment variable (the 2 ways the HttpPlatformHandler supports passing this value). So I've raised a feature request to the Vibrato repo to add something like this, as it would probably be valuable for other hosting scenarios too.
+I ran into an issue where the port the HttpPlatformHandler assigns the wrapped service is assigned arbitrarily at instantiation. Currently the Vibrto TechTestApp doesn't allow you to pass this as a runtime argument or specify it as a local environment variable (the 2 ways the HttpPlatformHandler supports passing this value). I've raised a feature request to the Vibrato repo to add something like this, as it would probably be valuable for other hosting scenarios too. This was implemented under the following feature request:
 
 https://github.com/vibrato/TechTestApp/issues/21
 
