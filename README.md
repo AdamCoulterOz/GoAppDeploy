@@ -59,6 +59,9 @@ Problem number ... 7? Found a bug with the HttpPlatformHandler now. When mapping
 
 https://social.msdn.microsoft.com/Forums/windowsserver/en-US/f34dfb44-b67d-46b9-8401-1eb5a2aafcda/unnecessary-space-is-attached-to-the-expansion-result-of-httpplatformport?forum=windowsazurewebsitespreview
 
+Have worked around it by getting user input cleaning added to the app:
+
+https://github.com/vibrato/TechTestApp/issues/23
 
 Artefacts in deployment:
 
