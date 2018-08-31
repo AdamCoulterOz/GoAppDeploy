@@ -39,7 +39,7 @@ $conn.ConnectionString = $builder.ConnectionString
 #$conn.ConnectionString = "Driver={PostgreSQL Unicode(x64)};Server=$Server;Port=$Port;Database=$DB;Uid=$Username;Pwd=$(ConvertFrom-SecureString $Password);"
 
 # Read query to run from file
-$Query = Get-Content 'createdb.sql' -Raw
+$Query = Get-Content '../config/createdb.sql' -Raw
 
 # Execute Query
 $cmd = New-object System.Data.Odbc.OdbcCommand($Query,$conn)
