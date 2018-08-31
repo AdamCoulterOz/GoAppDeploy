@@ -12,7 +12,7 @@
     [string]$Port = "5432",
 
     [Parameter(Mandatory=$False)]
-    [string]$DB = "postgres"
+    [string]$Database = "postgres"
 )
 
 # Install Chocolatey
@@ -29,7 +29,7 @@ $builder = New-Object System.Data.Odbc.OdbcConnectionStringBuilder
 $builder.Driver = "PostgreSQL Unicode(x64)"
 $builder.Add("Server", $Server)
 $builder.Add("Port", $Port)
-$builder.Add("Database", $DB)
+$builder.Add("Database", $Database)
 $builder.Add("Uid", $Username)
 $builder.Add("Pwd", $(ConvertFrom-SecureString $Password))
 
