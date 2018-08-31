@@ -22,7 +22,7 @@ $installScript = $webClient.DownloadString('https://chocolatey.org/install.ps1')
 Invoke-Expression $installScript
 
 # Use Chocolatey to install PostgreSQL ODBC driver
-choco install psqlodbc -y
+choco install psqlodbc -y -Force
 
 # Build the connection string
 $builder = New-Object System.Data.Odbc.OdbcConnectionStringBuilder
