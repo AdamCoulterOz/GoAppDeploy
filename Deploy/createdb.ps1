@@ -32,6 +32,7 @@ $builder.Add("Port", $Port)
 $builder.Add("Database", $Database)
 $builder.Add("Uid", $Username)
 $builder.Add("Pwd", $(ConvertFrom-SecureString $Password))
+$builder.Add("Encrypt", "yes")
 
 # Pass connection string to new connection
 $conn = New-Object System.Data.Odbc.OdbcConnection
