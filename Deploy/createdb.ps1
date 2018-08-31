@@ -30,10 +30,13 @@ $conn.ConnectionString = $builder.ConnectionString
 
 # Read query to run from file
 $dropQuery = "DROP DATABASE IF EXISTS $Database;"
-
-$createDbQuery = Get-Content '../config/createdb.sql' -Raw
-$createDbQuery = $createDbQuery.Replace("[dbname]",$Database)
-echo $createDbQuery 
+$createDbQuery = "CREATE DATABASE $Database
+                    WITH
+                    ENCODING = 'UTF8'
+                    LC_COLLATE = 'en-US'
+                    LC_CTYPE = 'en-US'
+                    CONNECTION LIMIT = -1
+                    TEMPLATE = template0;"
 
 # Execute Query
 $dropCmd = New-object System.Data.Odbc.OdbcCommand($dropQuery,$conn)
