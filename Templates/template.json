@@ -96,11 +96,11 @@
             "apiVersion": "2016-03-01",
             "name": "[parameters('appInstName')]",
             "type": "Microsoft.Web/sites",
-            "dependsOn": ["[variables('webfarmResource')]","[variables('databaseResource')]"],
+            "dependsOn": ["[variables('webfarmResource')]"],
             "location": "[variables('appLocation')]",
             "properties": {
                 "name": "[parameters('appInstName')]",
-                "serverFarmId": "[resourceid(variables('webfarmResource'))]",
+                "serverFarmId": "[resourceid('Microsoft.Web/serverfarms',parameters('appInstName'))]",
                 "siteConfig": {
                     "appSettings": [
                         {
