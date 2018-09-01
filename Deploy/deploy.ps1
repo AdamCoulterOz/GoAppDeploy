@@ -1,107 +1,82 @@
 <#
- .SYNOPSIS
-    Deploys a template to Azure
-
  .DESCRIPTION
-    Deploys an Azure Resource Manager template
-
- .PARAMETER subscriptionId
-    The subscription id where the template will be deployed.
-
- .PARAMETER resourceGroupName
-    The resource group where the template will be deployed. Can be the name of an existing or a new resource group.
-
- .PARAMETER resourceGroupLocation
-    Optional, a resource group location. If specified, will try to create a new resource group in this location. If not specified, assumes resource group is existing.
-
- .PARAMETER deploymentName
-    The deployment name.
-
- .PARAMETER templateFilePath
-    Optional, path to the template file. Defaults to template.json.
-
- .PARAMETER parametersFilePath
-    Optional, path to the parameters file. Defaults to parameters.json. If file is not found, will prompt for parameter values based on template.
+    Deploys the Vibrato Test App to a given Azure Subscription.
+    Requires that the Azure user running it has subscription provisioning rights.
 #>
 
 param(
- [Parameter(Mandatory=$True)]
+ [Parameter(Mandatory=$True,HelpMessage="ID of SUBSCRIPTION to deploy to.")]
  [string]
  $subscriptionId,
 
- [Parameter(Mandatory=$True)]
+ [Parameter(Mandatory=$True,HelpMessage="Name of RESOURCE GROUP to deploy to; cannot be existing.")]
  [string]
  $resourceGroupName,
 
+ [Parameter(Mandatory=$True,HelpMessage="Name of LOCATION to deploy to; specified if resource group is new.")]
  [string]
  $resourceGroupLocation,
 
- [Parameter(Mandatory=$True)]
+ [Parameter(Mandatory=$True,HelpMessage="Name for instance of application deployment; must be unique across Azure websites and contain only letters or numbers.")]
  [string]
- $deploymentName,
+ $appInstanceName,
 
+ [Parameter(Mandatory=$True,HelpMessage="Password to use as default database admin account.")]
+ [securestring]
+ $dbAdminPassword,
+
+ [Parameter(Mandatory=$False,HelpMessage="Path to TEMPLATE file; specified if not template.json in local folder.")]
  [string]
  $templateFilePath = "template.json",
 
+ [Parameter(Mandatory=$False,HelpMessage="Path to PARAMETERS file; specified if not parameters.json in local folder.")]
  [string]
  $parametersFilePath = "parameters.json"
 )
 
-<#
-.SYNOPSIS
-    Registers RPs
-#>
-Function RegisterRP {
-    Param(
-        [string]$ResourceProviderNamespace
-    )
-
-    Write-Host "Registering resource provider '$ResourceProviderNamespace'";
-    Register-AzureRmResourceProvider -ProviderNamespace $ResourceProviderNamespace;
-}
-
 #******************************************************************************
-# Script body
-# Execution begins here
+# Basic Input Validation
 #******************************************************************************
 $ErrorActionPreference = "Stop"
 
-# sign in
-Write-Host "Logging in...";
-Login-AzureRmAccount;
-
-# select subscription
-Write-Host "Selecting subscription '$subscriptionId'";
-Select-AzureRmSubscription -SubscriptionID $subscriptionId;
-
-# Register RPs
-$resourceProviders = @("microsoft.web","microsoft.dbforpostgresql");
-if($resourceProviders.length) {
-    Write-Host "Registering resource providers"
-    foreach($resourceProvider in $resourceProviders) {
-        RegisterRP($resourceProvider);
-    }
-}
-
-#Create or check for existing resource group
-$resourceGroup = Get-AzureRmResourceGroup -Name $resourceGroupName -ErrorAction SilentlyContinue
-if(!$resourceGroup)
+if((-Not (Test-Path $parametersFilePath)) -Or (-Not (Test-Path $templateFilePath)))
 {
-    Write-Host "Resource group '$resourceGroupName' does not exist. To create a new resource group, please enter a location.";
-    if(!$resourceGroupLocation) {
-        $resourceGroupLocation = Read-Host "resourceGroupLocation";
-    }
-    Write-Host "Creating resource group '$resourceGroupName' in location '$resourceGroupLocation'";
-    New-AzureRmResourceGroup -Name $resourceGroupName -Location $resourceGroupLocation
+  # Halt script because parameters and/or templates files cannot be found.
+  Write-Error "Template or Parameters files cannot be found. Halting deployment." -ErrorAction Stop
 }
-else{
-    Write-Host "Using existing resource group '$resourceGroupName'";
+
+#******************************************************************************
+# Execution
+#******************************************************************************
+
+# Login to Azure Account
+Write-Host "Logging in..."
+Login-AzureRmAccount
+
+# Find and select Azure Subscription
+Write-Host "Selecting subscription '$subscriptionId'"
+Select-AzureRmSubscription -SubscriptionID $subscriptionId
+
+# Register Relevent Resource Providers
+$resourceProviders = @("microsoft.web","microsoft.dbforpostgresql")
+Write-Host "Registering resource providers"
+foreach($resourceProvider in $resourceProviders) {
+    Write-Host "Registering resource provider '$resourceProvider'"
+    Register-AzureRmResourceProvider -ProviderNamespace $resourceProvider
 }
+
+# Check and Halt if resource group already exists
+$resourceGroup = Get-AzureRmResourceGroup -Name $resourceGroupName -ErrorAction SilentlyContinue
+if($resourceGroup)
+{
+  # Halt script because resource group name is already in use.
+  Write-Error "Resource group with name '$resourceGroupName' is already in use. Halting deployment." -ErrorAction Stop
+}
+
+# Create resource group in specified location
+Write-Host "Creating resource group '$resourceGroupName' in location '$resourceGroupLocation'"
+New-AzureRmResourceGroup -Name $resourceGroupName -Location $resourceGroupLocation
 
 # Start the deployment
-Write-Host "Starting deployment...";
-if(Test-Path $parametersFilePath) {
-    New-AzureRmResourceGroupDeployment -ResourceGroupName $resourceGroupName -TemplateFile $templateFilePath -TemplateParameterFile $parametersFilePath;
-} else {
-    New-AzureRmResourceGroupDeployment -ResourceGroupName $resourceGroupName -TemplateFile $templateFilePath;
-}
+Write-Host "Starting deployment..."
+New-AzureRmResourceGroupDeployment -ResourceGroupName $resourceGroupName -TemplateFile $templateFilePath -TemplateParameterFile $parametersFilePath -appInstName $appInstanceName -dbAdminPass $dbAdminPassword

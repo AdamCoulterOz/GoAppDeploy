@@ -2,80 +2,35 @@
     "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
     "contentVersion": "1.0.0.0",
     "parameters": {
-        "databaseName": {
-            "value": "vibratotestapp"
-        },
-        "administratorLogin": {
+        "dbAdminUser": {
             "value": "dbuser"
         },
-        "administratorLoginPassword": {
-            "value": null
-        },
-        "mysqLocation": {
-            "value": "Australia East"
-        },
-        "serverName": {
-            "value": "vibratotestapp-adam"
-        },
-        "skuCapacity": {
+        "dbCores": {
             "value": 1
         },
-        "skuFamily": {
-            "value": "Gen5"
+        "dbSizeGB": {
+            "value": 5
         },
-        "skuName": {
-            "value": "B_Gen5_1"
-        },
-        "skuSizeMB": {
-            "value": 5120
-        },
-        "skuTier": {
+        "dbPlanTier": {
             "value": "Basic"
         },
-        "storageMB": {
-            "value": 5120
-        },
-        "backupRetentionDays": {
-            "value": 7
-        },
-        "geoRedundantBackup": {
-            "value": "Disabled"
-        },
-        "version": {
+        "postgreSqlVersion": {
             "value": "10"
         },
-        "collation": {
+        "dbName": {
+          "value": "app"
+        },
+        "dbCollation": {
             "value": "en_US.utf8"
         },
-        "charset": {
+        "dbCharset": {
             "value": "utf8"
         },
-        "name": {
-            "value": "VibratoTestApp-Adam"
-        },
-        "hostingPlanName": {
-            "value": "VibratoTestApp-Adam"
-        },
-        "hostingEnvironment": {
-            "value": ""
-        },
-        "location": {
-            "value": "Australia East"
-        },
-        "sku": {
+        "webPlanTier": {
             "value": "Free"
         },
-        "workerSize": {
-            "value": "0"
-        },
-        "serverFarmResourceGroup": {
-            "value": "VibratoTestApp-Adam"
-        },
-        "skuCode": {
+        "webPlanCode": {
             "value": "F1"
-        },
-        "subscriptionId": {
-            "value": "75be1def-e48b-4b43-bacf-eb9bd676b7ba"
         }
     }
 }

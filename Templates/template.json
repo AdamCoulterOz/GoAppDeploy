@@ -1,174 +1,194 @@
 {
+    "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
     "parameters": {
-        "databaseName": {
+        "appInstName": {
+            "type": "string",
+            "metadata": { "description": "Unique site name, needs to be letters and numbers only as is used for database and other object names." }
+        },
+        "dbAdminUser": {
+            "type": "string",
+            "metadata": { "description": "Database admin user name." }
+        },
+        "dbAdminPass": {
+            "type": "securestring",
+            "metadata": { "description": "Database admin user initial password." }
+        },
+        "dbCores": {
+            "type": "int",
+            "defaultValue": 1
+        },
+        "dbPlanFamily": {
+            "type": "string",
+            "allowedValues": ["Gen4","Gen5"],
+            "defaultValue": "Gen5"
+        },
+        "dbSizeGB": {
+            "type": "int",
+            "minValue": 5,
+            "maxValue": 1024,
+            "defaultValue": 5
+        },
+        "dbPlanTier": {
+            "type": "string",
+            "allowedValues": [
+              "Basic",
+              "GeneralPurpose",
+              "MemoryOptimized"
+            ],
+            "defaultValue": "Basic"
+        },
+        "dbPlanTierMap": {
+            "type": "object",
+            "defaultValue": {
+              "Basic": "B",
+              "GeneralPurpose": "GP",
+              "MemoryOptimized": "MO"
+            }
+        },
+        "postgreSqlVersion": {
             "type": "string"
         },
-        "administratorLogin": {
+        "dbName":{
             "type": "string"
         },
-        "administratorLoginPassword": {
-            "type": "securestring"
-        },
-        "mysqLocation": {
+        "dbCollation": {
             "type": "string"
         },
-        "serverName": {
+        "dbCharset": {
             "type": "string"
         },
-        "skuCapacity": {
-            "type": "int"
+        "webPlanTier": {
+            "type": "string",
+            "allowedValues": [
+              "Free",
+              "Shared",
+              "Basic",
+              "Standard",
+              "Premium"
+            ],
+            "defaultValue": "Free"
         },
-        "skuFamily": {
-            "type": "string"
-        },
-        "storageMB": {
-            "type": "int"
-        },
-        "backupRetentionDays": {
-            "type": "int"
-        },
-        "geoRedundantBackup": {
-            "type": "string"
-        },
-        "skuName": {
-            "type": "string"
-        },
-        "skuSizeMB": {
-            "type": "int"
-        },
-        "skuTier": {
-            "type": "string"
-        },
-        "version": {
-            "type": "string"
-        },
-        "charset": {
-            "type": "string"
-        },
-        "collation": {
-            "type": "string"
-        },
-        "name": {
-            "type": "string"
-        },
-        "hostingPlanName": {
-            "type": "string"
-        },
-        "hostingEnvironment": {
-            "type": "string"
-        },
-        "location": {
-            "type": "string"
-        },
-        "sku": {
-            "type": "string"
-        },
-        "skuCode": {
-            "type": "string"
-        },
-        "workerSize": {
-            "type": "string"
-        },
-        "serverFarmResourceGroup": {
-            "type": "string"
-        },
-        "subscriptionId": {
-            "type": "string"
+        "webPlanCode": {
+            "type": "string",
+            "allowedValues": [
+              "F1", "D1",
+              "B1", "B2", "B3",
+              "S1", "S2", "S3",
+              "P1v2", "P2v2", "P3v2"
+            ],
+            "defaultValue": "F1"
         }
     },
+    "variables": {
+      "dbSizeMB":{
+        "type": "int",
+        "value": "[mul(parameters('dbSizeGB'), int('1024'))]"
+      },
+      "appLocation": {
+          "type": "string",
+          "value": "[resourceGroup().location]"
+      },
+      "dbPlanTierCd": "[parameters(dbPlanTierMap)[parameters(dbPlanTier)]]",
+      "dbPlanCode": {
+          "type": "string",
+          "value": "[concat(variables(dbPlanTierCd),'_',parameters(dbPlanFamily),'_',parameters(dbCores))]"
+      },
+      "dbAdminPass": "[concat('P', uniqueString(resourceGroup().id), 'x', '!')]",
+      "websiteResource": "[concat('Microsoft.Web/sites/', parameters('appInstName'))]",
+      "webfarmResource": "[concat('Microsoft.Web/serverfarms/', parameters('appInstName'))]",
+      "dbServerResource": "[concat('Microsoft.DBforPostgreSQL/servers/', parameters('serverName'))]",
+      "databaseResource": "[concat(variables('dbServerResource'), '/databases/' , parameters('dbName'))]"
+    },
     "resources": [
-        {
-            "name": "[parameters('name')]",
+      {
+            "apiVersion": "2016-03-01",
+            "name": "[parameters('appInstName')]",
             "type": "Microsoft.Web/sites",
-            "dependsOn": [
-                "[concat('Microsoft.Web/serverfarms/', parameters('hostingPlanName'))]"
-            ],
+            "dependsOn": ["[variables(webfarmResource)]","[variables(databaseResource)]"],
+            "location": "[variables('appLocation')]",
             "properties": {
+                "name": "[parameters('appInstName')]",
+                "serverFarmId": "[resourceid(variables(webfarmResource))]",
                 "siteConfig": {
-                    "connectionStrings": [
+                    "appSettings": [
                         {
-                            "name": "defaultConnection",
-                            "ConnectionString": "[concat('Database=', parameters('databaseName'), ';Server=', parameters('serverName') ,'.postgres.database.azure.com;User Id=',parameters('administratorLogin'),'@',parameters('serverName') ,';Password=',parameters('administratorLoginPassword'))]",
-                            "type": "PostgreSQL"
+                          "name": "DbUser",
+                          "value": "[concat(parameters('dbAdminUser'),'@',parameters('appInstName'))]"
+                        },
+                        {
+                          "name": "DbPassword",
+                          "value": "[parameters('dbAdminPass')]"
+                        },
+                        {
+                          "name": "DbName",
+                          "value": "[parameters('dbName')]"
+                        },
+                        {
+                          "name": "DbHost",
+                          "value": "[concat(parameters('appInstName'),'.postgres.database.azure.com)]"
                         }
                     ]
-                },
-                "name": "[parameters('name')]",
-                "serverFarmId": "[concat('/subscriptions/', parameters('subscriptionId'),'/resourcegroups/', parameters('serverFarmResourceGroup'), '/providers/Microsoft.Web/serverfarms/', parameters('hostingPlanName'))]",
-                "hostingEnvironment": "[parameters('hostingEnvironment')]"
-            },
-            "apiVersion": "2016-03-01",
-            "location": "[parameters('location')]"
-        },
-        {
-            "apiVersion": "2016-09-01",
-            "name": "[parameters('hostingPlanName')]",
-            "type": "Microsoft.Web/serverfarms",
-            "location": "[parameters('location')]",
-            "properties": {
-                "name": "[parameters('hostingPlanName')]",
-                "workerSizeId": "[parameters('workerSize')]",
-                "numberOfWorkers": "1",
-                "hostingEnvironment": "[parameters('hostingEnvironment')]"
-            },
-            "sku": {
-                "Tier": "[parameters('sku')]",
-                "Name": "[parameters('skuCode')]"
+                }
             }
         },
         {
-            "name": "[parameters('serverName')]",
-            "type": "Microsoft.DBforPostgreSQL/servers",
-            "apiVersion": "2017-12-01-preview",
-            "location": "[parameters('mysqLocation')]",
+            "apiVersion": "2016-09-01",
+            "name": "[parameters('appInstName')]",
+            "type": "Microsoft.Web/serverfarms",
+            "location": "[variables('appLocation')]",
             "properties": {
-                "version": "[parameters('version')]",
-                "administratorLogin": "[parameters('administratorLogin')]",
-                "administratorLoginPassword": "[parameters('administratorLoginPassword')]",
-                "storageProfile": {
-                    "storageMB": "[parameters('skuSizeMB')]",
-                    "backupRetentionDays": "[parameters('backupRetentionDays')]",
-                    "geoRedundantBackup": "[parameters('geoRedundantBackup')]"
-                },
+                "name": "[parameters('appInstName')]",
+                "workerSizeId": "0",
+                "numberOfWorkers": "1"
+            },
+            "sku": {
+                "Tier": "[parameters('webHostPlanTier')]",
+                "Name": "[parameters('webHostPlanCode')]"
+            }
+        },
+        {
+            "apiVersion": "2017-12-01-preview",
+            "name": "[parameters('appInstName')]",
+            "type": "Microsoft.DBforPostgreSQL/servers",
+            "location": "[variables('appLocation')]",
+            "properties": {
+                "version": "[parameters('postgreSqlVersion')]",
+                "administratorLogin": "[parameters('dbAdminUser')]",
+                "administratorLoginPassword": "[parameters('dbAdminPass')]",
+                "storageProfile": { "storageMB": "[variables('dbSizeMB')]" },
                 "sslEnforcement": "Disabled"
             },
             "sku": {
-                "name": "[parameters('skuName')]",
-                "tier": "[parameters('skuTier')]",
-                "capacity": "[parameters('skuCapacity')]",
-                "size": "[parameters('skuSizeMB')]",
-                "family": "[parameters('skuFamily')]"
+                "name": "[variables('dbPlanCode')]",
+                "tier": "[parameters('dbPlanTier')]",
+                "capacity": "[parameters('dbCores')]",
+                "size": "[variables('dbSizeMB')]",
+                "family": "[parameters('dbPlanFamily')]"
             },
             "resources": [
                 {
+                    "apiVersion": "2017-12-01-preview",
                     "name": "AllowAll",
                     "type": "firewallrules",
-                    "apiVersion": "2017-12-01-preview",
                     "properties": {
                         "startIpAddress": "0.0.0.0",
                         "endIpAddress": "255.255.255.255"
                     },
-                    "location": "[parameters('mysqLocation')]",
-                    "dependsOn": [
-                        "[concat('Microsoft.DBforPostgreSQL/servers/', parameters('serverName'), '/databases/' , parameters('databaseName'))]",
-                        "[concat('Microsoft.DBforPostgreSQL/servers/', parameters('serverName'))]"
-                    ]
+                    "location": "[variables('appLocation')]",
+                    "dependsOn": ["[variables('databaseResource')]"]
                 },
                 {
-                    "name": "[parameters('databaseName')]",
-                    "type": "databases",
                     "apiVersion": "2017-12-01-preview",
+                    "name": "[parameters('dbName')]",
+                    "type": "databases",
                     "properties": {
-                        "charset": "[parameters('charset')]",
-                        "collation": "[parameters('collation')]"
+                        "charset": "[parameters('dbCharset')]",
+                        "collation": "[parameters('dbCollation')]"
                     },
-                    "dependsOn": [
-                        "[concat('Microsoft.DBforPostgreSQL/servers/', parameters('serverName'))]"
-                    ]
+                    "dependsOn": ["[variables('dbServerResource')]"]
                 }
             ]
         }
-    ],
-    "$schema": "http://schema.management.azure.com/schemas/2014-04-01-preview/deploymentTemplate.json#",
-    "contentVersion": "1.0.0.0"
+    ]
 }
