@@ -81,23 +81,14 @@
         }
     },
     "variables": {
-      "dbSizeMB":{
-        "type": "int",
-        "value": "[mul(parameters('dbSizeGB'), int('1024'))]"
-      },
-      "appLocation": {
-          "type": "string",
-          "value": "[resourceGroup().location]"
-      },
-      "dbPlanTierCd": "[parameters(dbPlanTierMap)[parameters(dbPlanTier)]]",
-      "dbPlanCode": {
-          "type": "string",
-          "value": "[concat(variables(dbPlanTierCd),'_',parameters(dbPlanFamily),'_',parameters(dbCores))]"
-      },
+      "dbSizeMB": "[mul(parameters('dbSizeGB'), int('1024'))]",
+      "appLocation": "[resourceGroup().Location]",
+      "dbPlanTierCd": "[parameters('dbPlanTierMap')[parameters('dbPlanTier')]]",
+      "dbPlanCode": "[concat(variables('dbPlanTierCd'),'_',parameters('dbPlanFamily'),'_',parameters('dbCores'))]",
       "dbAdminPass": "[concat('P', uniqueString(resourceGroup().id), 'x', '!')]",
       "websiteResource": "[concat('Microsoft.Web/sites/', parameters('appInstName'))]",
       "webfarmResource": "[concat('Microsoft.Web/serverfarms/', parameters('appInstName'))]",
-      "dbServerResource": "[concat('Microsoft.DBforPostgreSQL/servers/', parameters('serverName'))]",
+      "dbServerResource": "[concat('Microsoft.DBforPostgreSQL/servers/', parameters('appInstName'))]",
       "databaseResource": "[concat(variables('dbServerResource'), '/databases/' , parameters('dbName'))]"
     },
     "resources": [
@@ -105,11 +96,11 @@
             "apiVersion": "2016-03-01",
             "name": "[parameters('appInstName')]",
             "type": "Microsoft.Web/sites",
-            "dependsOn": ["[variables(webfarmResource)]","[variables(databaseResource)]"],
+            "dependsOn": ["[variables('webfarmResource')]","[variables('databaseResource')]"],
             "location": "[variables('appLocation')]",
             "properties": {
                 "name": "[parameters('appInstName')]",
-                "serverFarmId": "[resourceid(variables(webfarmResource))]",
+                "serverFarmId": "[resourceid(variables('webfarmResource'))]",
                 "siteConfig": {
                     "appSettings": [
                         {
@@ -126,7 +117,7 @@
                         },
                         {
                           "name": "DbHost",
-                          "value": "[concat(parameters('appInstName'),'.postgres.database.azure.com)]"
+                          "value": "[concat(parameters('appInstName'),'.postgres.database.azure.com')]"
                         }
                     ]
                 }
@@ -143,8 +134,8 @@
                 "numberOfWorkers": "1"
             },
             "sku": {
-                "Tier": "[parameters('webHostPlanTier')]",
-                "Name": "[parameters('webHostPlanCode')]"
+                "Tier": "[parameters('webPlanTier')]",
+                "Name": "[parameters('webPlanCode')]"
             }
         },
         {
@@ -176,7 +167,7 @@
                         "endIpAddress": "255.255.255.255"
                     },
                     "location": "[variables('appLocation')]",
-                    "dependsOn": ["[variables('databaseResource')]"]
+                    "dependsOn": ["[variables('databaseResource')]","[variables('dbServerResource')]"]
                 },
                 {
                     "apiVersion": "2017-12-01-preview",
