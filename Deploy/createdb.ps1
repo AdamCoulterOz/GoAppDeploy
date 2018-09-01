@@ -29,7 +29,7 @@ $conn = New-Object System.Data.Odbc.OdbcConnection
 $conn.ConnectionString = $builder.ConnectionString
 
 # Read query to run from file
-$dropQuery = "DROP DATABASE IF EXISTS $Database;"
+$dropDbQuery = "DROP DATABASE IF EXISTS $Database;"
 $createDbQuery = "CREATE DATABASE $Database
                     WITH
                     ENCODING = 'UTF8'
@@ -38,15 +38,23 @@ $createDbQuery = "CREATE DATABASE $Database
                     CONNECTION LIMIT = -1
                     TEMPLATE = template0;"
 
-# Execute Query
-$dropCmd = New-object System.Data.Odbc.OdbcCommand($dropQuery,$conn)
+# Define commands
+$dropCmd = New-object System.Data.Odbc.OdbcCommand($dropDbQuery,$conn)
 $createCmd = New-object System.Data.Odbc.OdbcCommand($createDbQuery,$conn)
 $createCmd.CommandTimeout = 60
+
+# Connect
 $conn.Open()
+
+# Drop database if exists
 echo "Attempting DROP IF EXISTS"
 $dropResult = $dropCmd.ExecuteNonQuery();
 echo "DROP Result: $($dropResult.ToString().Trim())"
+
+# Create database
 echo "Attempting CREATE"
 $createResult = $createCmd.ExecuteNonQuery()
 echo "CREATE Result: $($createResult.ToString().Trim())"
+
+# Close connection
 $conn.Close()
