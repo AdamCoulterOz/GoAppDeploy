@@ -27,11 +27,11 @@ param(
 
  [Parameter(Mandatory=$False,HelpMessage="Path to TEMPLATE file; specified if not template.json in local folder.")]
  [string]
- $templateFilePath = "template.json",
+ $templateFilePath = "./Templates/template.json",
 
  [Parameter(Mandatory=$False,HelpMessage="Path to PARAMETERS file; specified if not parameters.json in local folder.")]
  [string]
- $parametersFilePath = "parameters.json"
+ $parametersFilePath = "./Templates/parameters.json"
 )
 
 #******************************************************************************
