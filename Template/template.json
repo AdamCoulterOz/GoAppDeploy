@@ -142,7 +142,6 @@
     "appLocation": "[resourceGroup().Location]",
     "dbPlanTierCd": "[parameters('dbPlanTierMap')[parameters('dbPlanTier')]]",
     "dbPlanCode": "[concat(variables('dbPlanTierCd'),'_',parameters('dbPlanFamily'),'_',parameters('dbCores'))]",
-    "dbAdminPass": "[concat('P', uniqueString(resourceGroup().id), 'x', '!')]",
     "websiteResource": "[concat('Microsoft.Web/sites/', parameters('appInstName'))]",
     "webfarmResource": "[concat('Microsoft.Web/serverfarms/', parameters('appInstName'))]",
     "dbServerResource": "[concat('Microsoft.DBforPostgreSQL/servers/', parameters('appInstName'))]",
