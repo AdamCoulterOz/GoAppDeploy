@@ -104,7 +104,7 @@ New-AzureRmResourceGroupDeployment  -ResourceGroupName $resourceGroupName `
 #******************************************************************************
 
 Write-Host "Getting latest artefacts from Vibrato github..."
-Invoke-Command "./Helper/getLatestArtefact.ps1"
+Invoke-Expression -Command "./Helper/getLatestArtefact.ps1"
 
 $appdirectory="./bin"
 
@@ -125,17 +125,10 @@ $username = $xml.SelectNodes("$baseXPath/@userName").value
 $password = $xml.SelectNodes("$baseXPath/@userPWD").value
 $url      = $xml.SelectNodes("$baseXPath/@publishUrl").value
 
-# Upload files recursively
-Set-Location $appdirectory
-$webclient = New-Object -TypeName System.Net.WebClient
-$webclient.Credentials = New-Object System.Net.NetworkCredential($username,$password)
-$files = Get-ChildItem -Path $appdirectory -Recurse | Where-Object{!($_.PSIsContainer)}
-foreach ($file in $files)
-{
-  Write-Host "Uploading file $file"
-    $relativepath = (Resolve-Path -Path $file.FullName -Relative).Replace(".\", "").Replace('\', '/')
-    $uri = New-Object System.Uri("$url/$relativepath")
-    "Uploading to " + $uri.AbsoluteUri
-    $webclient.UploadFile($uri, $file.FullName)
-}
-$webclient.Dispose()
+# Upload bin folder contents to wwwroot, maintaining folder structure
+$networkCredential = New-Object System.Net.NetworkCredential($username,$password)
+$sourceFolder = Resolve-Path $appdirectory
+
+./Helper/ftpUploadDirectory.ps1 -FTPHost $url `
+                                -NetworkCredential $networkCredential `
+                                -SourceFolder $sourceFolder
