@@ -4,7 +4,7 @@
     "parameters": {
         "appInstName": {
             "type": "string",
-            "metadata": { "description": "Unique site name, needs to be letters and numbers only as is used for database and other object names." }
+            "metadata": { "description": "Unique site name, also used for all resource names." }
         },
         "dbAdminUser": {
             "type": "string",
@@ -16,21 +16,27 @@
         },
         "dbCores": {
             "type": "int",
-            "defaultValue": 1
+            "metadata": { "description": "Database CPU core count." },
+            "defaultValue": 1,
+            "minValue": 1,
+            "maxValue": 32
         },
         "dbPlanFamily": {
             "type": "string",
+            "metadata": { "description": "Database hosting plan family." },
             "allowedValues": ["Gen4","Gen5"],
             "defaultValue": "Gen5"
         },
         "dbSizeGB": {
             "type": "int",
+            "metadata": { "description": "Database storage size in gigabytes." },
             "minValue": 5,
             "maxValue": 1024,
             "defaultValue": 5
         },
         "dbPlanTier": {
             "type": "string",
+            "metadata": { "description": "Database hosting plan tier." },
             "allowedValues": [
               "Basic",
               "GeneralPurpose",
@@ -40,6 +46,7 @@
         },
         "dbPlanTierMap": {
             "type": "object",
+            "metadata": { "description": "Database hosting plan tier mapping to code used in db sku name." },
             "defaultValue": {
               "Basic": "B",
               "GeneralPurpose": "GP",
@@ -47,19 +54,26 @@
             }
         },
         "postgreSqlVersion": {
-            "type": "string"
+            "type": "string",
+            "metadata": { "description": "Database postgreSQL version" },
+            "allowedValues": ["10","9.6","9.5"],
+            "defaultValue": "10"
         },
         "dbName":{
-            "type": "string"
+            "type": "string",
+            "metadata": { "description": "Database name." }
         },
         "dbCollation": {
-            "type": "string"
+            "type": "string",
+            "metadata": { "description": "Database collation." }
         },
         "dbCharset": {
-            "type": "string"
+            "type": "string",
+            "metadata": { "description": "Database character set." }
         },
         "webPlanTier": {
             "type": "string",
+            "metadata": { "description": "Web hosting plan tier." },
             "allowedValues": [
               "Free",
               "Shared",
@@ -71,6 +85,7 @@
         },
         "webPlanCode": {
             "type": "string",
+            "metadata": { "description": "Web hosting plan code." },
             "allowedValues": [
               "F1", "D1",
               "B1", "B2", "B3",
