@@ -1,200 +1,251 @@
 {
-    "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
-    "contentVersion": "1.0.0.0",
-    "parameters": {
-        "appInstName": {
-            "type": "string",
-            "metadata": { "description": "Unique site name, also used for all resource names." }
-        },
-        "dbAdminUser": {
-            "type": "string",
-            "metadata": { "description": "Database admin user name." }
-        },
-        "dbAdminPass": {
-            "type": "securestring",
-            "metadata": { "description": "Database admin user initial password." }
-        },
-        "dbCores": {
-            "type": "int",
-            "metadata": { "description": "Database CPU core count." },
-            "defaultValue": 1,
-            "minValue": 1,
-            "maxValue": 32
-        },
-        "dbPlanFamily": {
-            "type": "string",
-            "metadata": { "description": "Database hosting plan family." },
-            "allowedValues": ["Gen4","Gen5"],
-            "defaultValue": "Gen5"
-        },
-        "dbSizeGB": {
-            "type": "int",
-            "metadata": { "description": "Database storage size in gigabytes." },
-            "minValue": 5,
-            "maxValue": 1024,
-            "defaultValue": 5
-        },
-        "dbPlanTier": {
-            "type": "string",
-            "metadata": { "description": "Database hosting plan tier." },
-            "allowedValues": [
-              "Basic",
-              "GeneralPurpose",
-              "MemoryOptimized"
-            ],
-            "defaultValue": "Basic"
-        },
-        "dbPlanTierMap": {
-            "type": "object",
-            "metadata": { "description": "Database hosting plan tier mapping to code used in db sku name." },
-            "defaultValue": {
-              "Basic": "B",
-              "GeneralPurpose": "GP",
-              "MemoryOptimized": "MO"
+  "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "appInstName": {
+      "type": "string",
+      "metadata": {
+        "description": "Unique site name, also used for all resource names."
+      }
+    },
+    "dbAdminUser": {
+      "type": "string",
+      "metadata": {
+        "description": "Database admin user name."
+      }
+    },
+    "dbAdminPass": {
+      "type": "securestring",
+      "metadata": {
+        "description": "Database admin user initial password."
+      }
+    },
+    "dbCores": {
+      "type": "int",
+      "metadata": {
+        "description": "Database CPU core count."
+      },
+      "defaultValue": 1,
+      "minValue": 1,
+      "maxValue": 32
+    },
+    "dbPlanFamily": {
+      "type": "string",
+      "metadata": {
+        "description": "Database hosting plan family."
+      },
+      "allowedValues": [
+        "Gen4",
+        "Gen5"
+      ],
+      "defaultValue": "Gen5"
+    },
+    "dbSizeGB": {
+      "type": "int",
+      "metadata": {
+        "description": "Database storage size in gigabytes."
+      },
+      "minValue": 5,
+      "maxValue": 1024,
+      "defaultValue": 5
+    },
+    "dbPlanTier": {
+      "type": "string",
+      "metadata": {
+        "description": "Database hosting plan tier."
+      },
+      "allowedValues": [
+        "Basic",
+        "GeneralPurpose",
+        "MemoryOptimized"
+      ],
+      "defaultValue": "Basic"
+    },
+    "dbPlanTierMap": {
+      "type": "object",
+      "metadata": {
+        "description": "Database hosting plan tier mapping to code used in db sku name."
+      },
+      "defaultValue": {
+        "Basic": "B",
+        "GeneralPurpose": "GP",
+        "MemoryOptimized": "MO"
+      }
+    },
+    "postgreSqlVersion": {
+      "type": "string",
+      "metadata": {
+        "description": "Database postgreSQL version"
+      },
+      "allowedValues": [
+        "10",
+        "9.6",
+        "9.5"
+      ],
+      "defaultValue": "10"
+    },
+    "dbName": {
+      "type": "string",
+      "metadata": {
+        "description": "Database name."
+      }
+    },
+    "dbCollation": {
+      "type": "string",
+      "metadata": {
+        "description": "Database collation."
+      }
+    },
+    "dbCharset": {
+      "type": "string",
+      "metadata": {
+        "description": "Database character set."
+      }
+    },
+    "webPlanTier": {
+      "type": "string",
+      "metadata": {
+        "description": "Web hosting plan tier."
+      },
+      "allowedValues": [
+        "Free",
+        "Shared",
+        "Basic",
+        "Standard",
+        "Premium"
+      ],
+      "defaultValue": "Free"
+    },
+    "webPlanCode": {
+      "type": "string",
+      "metadata": {
+        "description": "Web hosting plan code."
+      },
+      "allowedValues": [
+        "F1",
+        "D1",
+        "B1",
+        "B2",
+        "B3",
+        "S1",
+        "S2",
+        "S3",
+        "P1v2",
+        "P2v2",
+        "P3v2"
+      ],
+      "defaultValue": "F1"
+    }
+  },
+  "variables": {
+    "dbSizeMB": "[mul(parameters('dbSizeGB'), int('1024'))]",
+    "appLocation": "[resourceGroup().Location]",
+    "dbPlanTierCd": "[parameters('dbPlanTierMap')[parameters('dbPlanTier')]]",
+    "dbPlanCode": "[concat(variables('dbPlanTierCd'),'_',parameters('dbPlanFamily'),'_',parameters('dbCores'))]",
+    "dbAdminPass": "[concat('P', uniqueString(resourceGroup().id), 'x', '!')]",
+    "websiteResource": "[concat('Microsoft.Web/sites/', parameters('appInstName'))]",
+    "webfarmResource": "[concat('Microsoft.Web/serverfarms/', parameters('appInstName'))]",
+    "dbServerResource": "[concat('Microsoft.DBforPostgreSQL/servers/', parameters('appInstName'))]",
+    "databaseResource": "[concat(variables('dbServerResource'), '/databases/' , parameters('dbName'))]"
+  },
+  "resources": [
+    {
+      "apiVersion": "2016-03-01",
+      "name": "[parameters('appInstName')]",
+      "type": "Microsoft.Web/sites",
+      "dependsOn": [
+        "[variables('webfarmResource')]"
+      ],
+      "location": "[variables('appLocation')]",
+      "properties": {
+        "name": "[parameters('appInstName')]",
+        "serverFarmId": "[resourceid('Microsoft.Web/serverfarms',parameters('appInstName'))]",
+        "siteConfig": {
+          "appSettings": [
+            {
+              "name": "DbUser",
+              "value": "[concat(parameters('dbAdminUser'),'@',parameters('appInstName'))]"
+            },
+            {
+              "name": "DbPassword",
+              "value": "[parameters('dbAdminPass')]"
+            },
+            {
+              "name": "DbName",
+              "value": "[parameters('dbName')]"
+            },
+            {
+              "name": "DbHost",
+              "value": "[concat(parameters('appInstName'),'.postgres.database.azure.com')]"
             }
-        },
-        "postgreSqlVersion": {
-            "type": "string",
-            "metadata": { "description": "Database postgreSQL version" },
-            "allowedValues": ["10","9.6","9.5"],
-            "defaultValue": "10"
-        },
-        "dbName":{
-            "type": "string",
-            "metadata": { "description": "Database name." }
-        },
-        "dbCollation": {
-            "type": "string",
-            "metadata": { "description": "Database collation." }
-        },
-        "dbCharset": {
-            "type": "string",
-            "metadata": { "description": "Database character set." }
-        },
-        "webPlanTier": {
-            "type": "string",
-            "metadata": { "description": "Web hosting plan tier." },
-            "allowedValues": [
-              "Free",
-              "Shared",
-              "Basic",
-              "Standard",
-              "Premium"
-            ],
-            "defaultValue": "Free"
-        },
-        "webPlanCode": {
-            "type": "string",
-            "metadata": { "description": "Web hosting plan code." },
-            "allowedValues": [
-              "F1", "D1",
-              "B1", "B2", "B3",
-              "S1", "S2", "S3",
-              "P1v2", "P2v2", "P3v2"
-            ],
-            "defaultValue": "F1"
+          ]
         }
+      }
     },
-    "variables": {
-      "dbSizeMB": "[mul(parameters('dbSizeGB'), int('1024'))]",
-      "appLocation": "[resourceGroup().Location]",
-      "dbPlanTierCd": "[parameters('dbPlanTierMap')[parameters('dbPlanTier')]]",
-      "dbPlanCode": "[concat(variables('dbPlanTierCd'),'_',parameters('dbPlanFamily'),'_',parameters('dbCores'))]",
-      "dbAdminPass": "[concat('P', uniqueString(resourceGroup().id), 'x', '!')]",
-      "websiteResource": "[concat('Microsoft.Web/sites/', parameters('appInstName'))]",
-      "webfarmResource": "[concat('Microsoft.Web/serverfarms/', parameters('appInstName'))]",
-      "dbServerResource": "[concat('Microsoft.DBforPostgreSQL/servers/', parameters('appInstName'))]",
-      "databaseResource": "[concat(variables('dbServerResource'), '/databases/' , parameters('dbName'))]"
+    {
+      "apiVersion": "2016-09-01",
+      "name": "[parameters('appInstName')]",
+      "type": "Microsoft.Web/serverfarms",
+      "location": "[variables('appLocation')]",
+      "properties": {
+        "name": "[parameters('appInstName')]",
+        "workerSizeId": "0",
+        "numberOfWorkers": "1"
+      },
+      "sku": {
+        "Tier": "[parameters('webPlanTier')]",
+        "Name": "[parameters('webPlanCode')]"
+      }
     },
-    "resources": [
-      {
-            "apiVersion": "2016-03-01",
-            "name": "[parameters('appInstName')]",
-            "type": "Microsoft.Web/sites",
-            "dependsOn": ["[variables('webfarmResource')]"],
-            "location": "[variables('appLocation')]",
-            "properties": {
-                "name": "[parameters('appInstName')]",
-                "serverFarmId": "[resourceid('Microsoft.Web/serverfarms',parameters('appInstName'))]",
-                "siteConfig": {
-                    "appSettings": [
-                        {
-                          "name": "DbUser",
-                          "value": "[concat(parameters('dbAdminUser'),'@',parameters('appInstName'))]"
-                        },
-                        {
-                          "name": "DbPassword",
-                          "value": "[parameters('dbAdminPass')]"
-                        },
-                        {
-                          "name": "DbName",
-                          "value": "[parameters('dbName')]"
-                        },
-                        {
-                          "name": "DbHost",
-                          "value": "[concat(parameters('appInstName'),'.postgres.database.azure.com')]"
-                        }
-                    ]
-                }
-            }
+    {
+      "apiVersion": "2017-12-01-preview",
+      "name": "[parameters('appInstName')]",
+      "type": "Microsoft.DBforPostgreSQL/servers",
+      "location": "[variables('appLocation')]",
+      "properties": {
+        "version": "[parameters('postgreSqlVersion')]",
+        "administratorLogin": "[parameters('dbAdminUser')]",
+        "administratorLoginPassword": "[parameters('dbAdminPass')]",
+        "storageProfile": {
+          "storageMB": "[variables('dbSizeMB')]"
+        },
+        "sslEnforcement": "Disabled"
+      },
+      "sku": {
+        "name": "[variables('dbPlanCode')]",
+        "tier": "[parameters('dbPlanTier')]",
+        "capacity": "[parameters('dbCores')]",
+        "size": "[variables('dbSizeMB')]",
+        "family": "[parameters('dbPlanFamily')]"
+      },
+      "resources": [
+        {
+          "apiVersion": "2017-12-01-preview",
+          "name": "AllowAll",
+          "type": "firewallrules",
+          "properties": {
+            "startIpAddress": "0.0.0.0",
+            "endIpAddress": "255.255.255.255"
+          },
+          "location": "[variables('appLocation')]",
+          "dependsOn": [
+            "[variables('databaseResource')]",
+            "[variables('dbServerResource')]"
+          ]
         },
         {
-            "apiVersion": "2016-09-01",
-            "name": "[parameters('appInstName')]",
-            "type": "Microsoft.Web/serverfarms",
-            "location": "[variables('appLocation')]",
-            "properties": {
-                "name": "[parameters('appInstName')]",
-                "workerSizeId": "0",
-                "numberOfWorkers": "1"
-            },
-            "sku": {
-                "Tier": "[parameters('webPlanTier')]",
-                "Name": "[parameters('webPlanCode')]"
-            }
-        },
-        {
-            "apiVersion": "2017-12-01-preview",
-            "name": "[parameters('appInstName')]",
-            "type": "Microsoft.DBforPostgreSQL/servers",
-            "location": "[variables('appLocation')]",
-            "properties": {
-                "version": "[parameters('postgreSqlVersion')]",
-                "administratorLogin": "[parameters('dbAdminUser')]",
-                "administratorLoginPassword": "[parameters('dbAdminPass')]",
-                "storageProfile": { "storageMB": "[variables('dbSizeMB')]" },
-                "sslEnforcement": "Disabled"
-            },
-            "sku": {
-                "name": "[variables('dbPlanCode')]",
-                "tier": "[parameters('dbPlanTier')]",
-                "capacity": "[parameters('dbCores')]",
-                "size": "[variables('dbSizeMB')]",
-                "family": "[parameters('dbPlanFamily')]"
-            },
-            "resources": [
-                {
-                    "apiVersion": "2017-12-01-preview",
-                    "name": "AllowAll",
-                    "type": "firewallrules",
-                    "properties": {
-                        "startIpAddress": "0.0.0.0",
-                        "endIpAddress": "255.255.255.255"
-                    },
-                    "location": "[variables('appLocation')]",
-                    "dependsOn": ["[variables('databaseResource')]","[variables('dbServerResource')]"]
-                },
-                {
-                    "apiVersion": "2017-12-01-preview",
-                    "name": "[parameters('dbName')]",
-                    "type": "databases",
-                    "properties": {
-                        "charset": "[parameters('dbCharset')]",
-                        "collation": "[parameters('dbCollation')]"
-                    },
-                    "dependsOn": ["[variables('dbServerResource')]"]
-                }
-            ]
+          "apiVersion": "2017-12-01-preview",
+          "name": "[parameters('dbName')]",
+          "type": "databases",
+          "properties": {
+            "charset": "[parameters('dbCharset')]",
+            "collation": "[parameters('dbCollation')]"
+          },
+          "dependsOn": [
+            "[variables('dbServerResource')]"
+          ]
         }
-    ]
+      ]
+    }
+  ]
 }
