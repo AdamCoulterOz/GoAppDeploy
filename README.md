@@ -13,19 +13,19 @@ Azure App Services
 
 ### Building Locally
 
-Attempting to setup the project and compile the project locally intially was troublesome because I couldn't get the createdb command to run. Wasn't sure where the problem was and have never used or debugged Go code before. I setup a debugger (GoLand) and struggled to get it to hit my breakpoints. I then realised that Go apps fully quality all imports, which means any code in a folder will go to the gopath src folder version of it, ignoring my local clone. This seems to be odd, as I would only expect to reference external code this way, not within a project. Apparently Go doesnt support go files broken down into more than a single folder before you need to break it into multiple apps.
+Attempting to setup the project and compile the project locally initially was troublesome because I couldn't get the createdb command to run. Wasn't sure where the problem was and have never used or debugged Go code before. I setup a debugger (GoLand) and struggled to get it to hit my breakpoints. I then realised that Go apps fully quality all imports, which means any code in a folder will go to the gopath src folder version of it, ignoring my local clone. This seems to be odd, as I would only expect to reference external code this way, not within a project. Apparently Go doesn't support go files broken down into more than a single folder before you need to break it into multiple apps.
 
 I figured out debugging a Go app and how it builds, etc including why dep ensure acts differently than go get. This allowed me to find where the createdb command was failing, which was because a connection to a PostgreSQL database requires specifying a default database otherwise you can't run scripts. No idea how anyone has managed to get updatedb to run before. Tom fixed it for me with the following commit:
 
 https://github.com/vibrato/TechTestApp/pull/20/commits/fea0f139dc070e7187165d205419ea9adaae8412
 
-Notice line 50 in db/db.go needed a default database specified, in this case just defaulting to the postgres db. Without this, the subsequent DROP and CREATE database queries completely fail. No sure how anyone else has passed this test before without finding this?
+Notice line 50 in db/db.go needed a default database specified, in this case just defaulting to the postgreSQL db. Without this, the subsequent DROP and CREATE database queries completely fail. No sure how anyone else has passed this test before without finding this?
 
 ### Setup Custom Build
 
 Initial approach attempted was to use a VSTS project with a custom GO build definition stored in YAML feeding a release pipeline to perform the deployment. I forked the TechTestApp to my own account, to have CI builds from it integrated with VSTS.
 
->**Super Hint:** Never try to fork a Go app on github, it can't reference its own local files as they are hardcoded to the original github account, took me a few hours to realise this. 
+>**Super Hint:** Never try to fork a Go app on github, it can't reference its own local files as they are hard-coded to the original github account, took me a few hours to realise this. 
 >*sigh*
 
 My own custom build was initially needed as I had to modify the code in 2 ways:
@@ -51,7 +51,7 @@ I have created this repo with the Azure ARM templates, and the PowerShell script
 
 Initially I was unsure how to deploy a Go app which has it's own listener daemon on Azure App Service Web Apps. Usually Azure Web Apps handle the hosting layer for you. I found a way to work around this by using the Microsoft IIS HttpPlatformHandler which is basically just requires you to specify a configuration file (web.config) which maps the Web App hosting to your listener endpoint, while retaining all the goodies of scaling on App Service Web Apps like security, load balancing, autoscaling, and automated management.
 
-I ran into an issue where the port the HttpPlatformHandler assigns the wrapped service is assigned arbitrarily at instantiation. Currently the Vibrto TechTestApp doesn't allow you to pass this as a runtime argument or specify it as a local environment variable (the 2 ways the HttpPlatformHandler supports passing this value). I've raised a feature request to the Vibrato repo to add something like this, as it would probably be valuable for other hosting scenarios too. This was implemented under the following feature request:
+I ran into an issue where the port the HttpPlatformHandler assigns the wrapped service is assigned arbitrarily at instantiation. Currently the Vibrato TechTestApp doesn't allow you to pass this as a runtime argument or specify it as a local environment variable (the 2 ways the HttpPlatformHandler supports passing this value). I've raised a feature request to the Vibrato repo to add something like this, as it would probably be valuable for other hosting scenarios too. This was implemented under the following feature request:
 
 https://github.com/vibrato/TechTestApp/issues/21
 
