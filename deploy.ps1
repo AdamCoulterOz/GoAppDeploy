@@ -31,12 +31,12 @@ param(
  $dbAdminPassword,
 
  [Parameter(Mandatory=$False,`
-   HelpMessage="Path to TEMPLATE file; specified if not template.json in local folder.")]
+   HelpMessage="Path to TEMPLATE file; specified if not template.json in Template folder.")]
  [string]
  $templateFilePath = "./Template/template.json",
 
  [Parameter(Mandatory=$False,`
-   HelpMessage="Path to PARAMETERS file; specified if not parameters.json in local folder.")]
+   HelpMessage="Path to PARAMETERS file; specified if not parameters.json in Template folder.")]
  [string]
  $parametersFilePath = "./Template/parameters.json"
 )
