@@ -41,6 +41,23 @@ param(
  $parametersFilePath = "./Template/parameters.json"
 )
 
+
+function Update-WebAppSetting($resGroupName, $webAppName, $key, $value)
+{
+  #Get existing WebApp
+  $webApp = Get-AzureRmWebApp -ResourceGroupName $resGroupName -Name $webAppName
+  $appSettingList = $webApp.SiteConfig.AppSettings
+  #Hash existing settings
+  $hash = @{}
+  ForEach ($kvp in $appSettingList) {
+      $hash[$kvp.Name] = $kvp.Value
+  }
+  #Add/update new setting
+  $hash[$key] = $value
+  
+  #Save it back
+  Set-AzureRmWebApp -ResourceGroupName $resGroupName -Name $webAppName -AppSettings $hash
+}
 #******************************************************************************
 # Basic Input Validation
 #******************************************************************************
@@ -132,3 +149,18 @@ $sourceFolder = Resolve-Path $appdirectory
 ./Helper/ftpUploadDirectory.ps1 -FTPHost $url `
                                 -NetworkCredential $networkCredential `
                                 -SourceFolder $sourceFolder
+
+Restart-AzureRmWebApp -ResourceGroupName $resourceGroupName `
+                      -Name $appInstanceName
+
+#Start-Sleep -Seconds 5
+
+Update-WebAppSetting -resGroupName $resourceGroupName `
+                     -webAppName $appInstanceName `
+                     -key "action" `
+                     -value "serve"
+
+Restart-AzureRmWebApp -ResourceGroupName $resourceGroupName `
+                      -Name $appInstanceName
+
+Write-Output "Browse to deployed website here: $appInstanceName.azurewebsites.net"

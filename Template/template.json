@@ -102,6 +102,17 @@
         "description": "Database character set."
       }
     },
+    "siteAction": {
+      "type": "string",
+      "metadata": {
+        "description": "Arguments to provide the Go Binary."
+      },
+      "defaultValue": "updatedb -s",
+      "allowedValues": [
+        "updatedb -s",
+        "serve"
+      ]
+    },
     "webPlanTier": {
       "type": "string",
       "metadata": {
@@ -176,6 +187,10 @@
             {
               "name": "DbHost",
               "value": "[concat(parameters('appInstName'),'.postgres.database.azure.com')]"
+            },
+            {
+              "name": "Action",
+              "value": "[parameters('siteAction')]"
             }
           ]
         }

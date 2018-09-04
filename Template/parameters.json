@@ -26,6 +26,9 @@
         "dbCharset": {
             "value": "utf8"
         },
+        "siteAction":{
+            "value": "updatedb -s"
+        },
         "webPlanTier": {
             "value": "Free"
         },
