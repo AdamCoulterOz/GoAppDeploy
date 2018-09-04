@@ -1,4 +1,4 @@
 ﻿.\deploy.ps1    -subscriptionId "xxx" `
-                -resourceGroupName "test-app" `
+                -resourceGroupName "exam-app-adamc" `
                 -resourceGroupLocation "australiaeast" `
                 -appInstanceName "vibratotestapp"
