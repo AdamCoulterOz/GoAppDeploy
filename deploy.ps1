@@ -10,25 +10,20 @@ param(
  [string]
  $subscriptionId,
 
- [Parameter(Mandatory=$True,`
+ [Parameter(Mandatory=$False,`
    HelpMessage="Name of RESOURCE GROUP to deploy to; cannot be existing.")]
  [string]
- $resourceGroupName,
+ $resourceGroupName="exam-app-adamc",
 
- [Parameter(Mandatory=$True,`
+ [Parameter(Mandatory=$False,`
    HelpMessage="Name of LOCATION to deploy to; specified if resource group is new.")]
  [string]
- $resourceGroupLocation,
+ $resourceGroupLocation="australiaeast",
 
- [Parameter(Mandatory=$True,`
+ [Parameter(Mandatory=$False,`
    HelpMessage="Name for instance of application deployment; must be unique across Azure websites and contain only letters or numbers.")]
  [string]
- $appInstanceName,
-
- [Parameter(Mandatory=$True,`
-   HelpMessage="Password to use as default database admin account.")]
- [securestring]
- $dbAdminPassword,
+ $appInstanceName="vibratotestapp",
 
  [Parameter(Mandatory=$False,`
    HelpMessage="Path to TEMPLATE file; specified if not template.json in Template folder.")]
@@ -41,23 +36,30 @@ param(
  $parametersFilePath = "./Template/parameters.json"
 )
 
+# default variables
+$dbUsername = "dbuser"
+$dbName = "app"
 
-function Update-WebAppSetting($resGroupName, $webAppName, $key, $value)
+. ./Helper/GitHubArtefacts.ps1
+. ./Helper/GeneratePassword.ps1
+. ./Helper/FtpUploadDirectory.ps1
+
+[securestring]$dbAdminPassword = GeneratePassword
+function downloadArtefactForPlatform($platform,$folder)
 {
-  #Get existing WebApp
-  $webApp = Get-AzureRmWebApp -ResourceGroupName $resGroupName -Name $webAppName
-  $appSettingList = $webApp.SiteConfig.AppSettings
-  #Hash existing settings
-  $hash = @{}
-  ForEach ($kvp in $appSettingList) {
-      $hash[$kvp.Name] = $kvp.Value
-  }
-  #Add/update new setting
-  $hash[$key] = $value
-  
-  #Save it back
-  Set-AzureRmWebApp -ResourceGroupName $resGroupName -Name $webAppName -AppSettings $hash
+  $saveFolder = "$folder/$platform"
+  New-Item -Path $saveFolder -ItemType directory
+  DownloadGitHubArtefact -Organisation "vibrato" `
+                         -Repository "TechTestApp" `
+                         -PackageName "TechTestApp_[ver]_$platform.zip" `
+                         -SavePath $saveFolder `
+                         -Unzip
+
+  Get-ChildItem -Path "$saveFolder\dist" -Recurse |  `
+      Move-Item -Destination $saveFolder
+  Remove-Item "$saveFolder\dist"
 }
+
 #******************************************************************************
 # Basic Input Validation
 #******************************************************************************
@@ -68,6 +70,26 @@ if((-Not (Test-Path $parametersFilePath)) `
 {
   # Halt script because parameters and/or templates files cannot be found.
   Write-Error "Template or Parameters files cannot be found. Halting deployment." `
+    -ErrorAction Stop
+}
+
+#******************************************************************************
+# Host OS Validation
+#******************************************************************************
+# Determine OS Version
+$os = [Environment]::OSVersion.Platform
+$is64 = [System.Environment]::Is64BitProcess
+
+switch($os)
+{
+  "Unix" { $plat = "darwin"}
+  "Linux" { If($is64) { $plat = "linux64" } }
+  "Win32NT" { If($is64) { $plat = "win64" } Else {$plat = "win32"} }
+}
+
+if(!$plat)
+{
+  Write-Error "Current Host OS is not supported. Supported OS includes Unix 64bit, Linux 64bit, Win 32/64bit." `
     -ErrorAction Stop
 }
 
@@ -83,7 +105,7 @@ Login-AzureRmAccount
 Write-Host "Selecting subscription '$subscriptionId'"
 Select-AzureRmSubscription -SubscriptionID $subscriptionId
 
-# Register Relevent Resource Providers
+# Register Relevent Resource Providers for Azure services used
 $resourceProviders = @("microsoft.web","microsoft.dbforpostgresql")
 Write-Host "Registering resource providers"
 foreach($resourceProvider in $resourceProviders) {
@@ -97,16 +119,19 @@ $resourceGroup = Get-AzureRmResourceGroup -Name $resourceGroupName `
 if($resourceGroup)
 {
   # Halt script because resource group name is already in use.
-  Write-Error "Resource group with name '$resourceGroupName' is already in use. `
-                Halting deployment." -ErrorAction Stop
+  #Write-Error "Resource group with name '$resourceGroupName' is already in use. `
+  #              Halting deployment." -ErrorAction Stop
 }
-
-# Create resource group in specified location
+else {
+  # Create resource group in specified location
 Write-Host "Creating resource group '$resourceGroupName' `
-            in location '$resourceGroupLocation'"
+in location '$resourceGroupLocation'"
 
 New-AzureRmResourceGroup -Name $resourceGroupName `
-                         -Location $resourceGroupLocation
+            -Location $resourceGroupLocation
+}
+
+
 
 # Start the deployment
 Write-Host "Starting deployment..."
@@ -114,28 +139,35 @@ New-AzureRmResourceGroupDeployment  -ResourceGroupName $resourceGroupName `
                                     -TemplateFile $templateFilePath `
                                     -TemplateParameterFile $parametersFilePath `
                                     -appInstName $appInstanceName `
-                                    -dbAdminPass $dbAdminPassword
+                                    -dbAdminUser $dbUsername `
+                                    -dbAdminPass $dbAdminPassword `
+                                    -dbName $dbName
 
 #******************************************************************************
-# Deploy Go App Binaries
+# Get & Stage Go App Deployment Files
 #******************************************************************************
 
 Write-Host "Getting latest artefacts from Vibrato github..."
-Invoke-Expression -Command "./Helper/getLatestArtefact.ps1"
 
-$appdirectory="./bin"
+#clear bin folder from previous attempts
+Remove-Item ".\bin" -Recurse -ErrorAction Ignore
+New-Item -Path ".\bin" -ItemType directory
+$appdirectory=Resolve-Path ".\bin"
 
-Copy-Item "./Config/web.config" -Destination $appdirectory
+$deploymentPlatform = "win64"
+downloadArtefactForPlatform -platform $deploymentPlatform -folder $appdirectory
+Copy-Item ".\Config\web.config" -Destination "$appdirectory\$deploymentPlatform\"
 
+#******************************************************************************
+# Deploy Go App Deployment Files
+#******************************************************************************
 
 Write-Host "Download publishing profile..."
 # Get publishing profile for the web app
 $xml = [xml](Get-AzureRmWebAppPublishingProfile -Name $appInstanceName `
-                                                -ResourceGroupName $resourceGroupName `
-                                                -OutputFile null)
+                                                -ResourceGroupName $resourceGroupName)
 
 # Extract connection information from publishing profile
-
 $baseXPath = "//publishProfile[@publishMethod=`"FTP`"]"
 
 $username = $xml.SelectNodes("$baseXPath/@userName").value
@@ -144,23 +176,49 @@ $url      = $xml.SelectNodes("$baseXPath/@publishUrl").value
 
 # Upload bin folder contents to wwwroot, maintaining folder structure
 $networkCredential = New-Object System.Net.NetworkCredential($username,$password)
-$sourceFolder = Resolve-Path $appdirectory
+$sourceFolder = "$appdirectory/$deploymentPlatform"
 
-./Helper/ftpUploadDirectory.ps1 -FTPHost $url `
-                                -NetworkCredential $networkCredential `
-                                -SourceFolder $sourceFolder
+FTPUploadDirectory -FTPHost $url `
+                   -NetworkCredential $networkCredential `
+                   -SourceFolder $sourceFolder
+
+#******************************************************************************
+# Initialise Database
+#******************************************************************************
+
+$env:VTT_DBUSER = "$dbUsername@$appInstanceName"
+$env:VTT_DBPASSWORD = $dbAdminPassword
+$env:VTT_DBNAME = $dbName
+$env:VTT_DBHOST = "$appInstanceName.postgres.database.azure.com"
+
+$execPath = "./TechTestApp.exe"
+if(-Not ($plat -Eq "win64"))
+{
+  downloadArtefactForPlatform -platform $plat -folder $appdirectory
+  $execPath = "./TechTestApp"
+  if($plat.StartsWith("win")) { $execPath += ".exe" }
+}
+Set-Location "$appdirectory/$plat/"
+#ensure executeable has exec permission
+if(($plat -eq "darwin") -or ($plat -eq "linux64"))
+{
+  chmod +x TechTestApp
+}
+
+& $execPath "updatedb" "-s"
+#******************************************************************************
+# Restart Web App and Test Deployment
+#******************************************************************************
 
 Restart-AzureRmWebApp -ResourceGroupName $resourceGroupName `
                       -Name $appInstanceName
 
-#Start-Sleep -Seconds 5
-
-Update-WebAppSetting -resGroupName $resourceGroupName `
-                     -webAppName $appInstanceName `
-                     -key "action" `
-                     -value "serve"
-
-Restart-AzureRmWebApp -ResourceGroupName $resourceGroupName `
-                      -Name $appInstanceName
-
-Write-Output "Browse to deployed website here: $appInstanceName.azurewebsites.net"
+$response = Invoke-WebRequest -Uri "https://$appInstanceName.azurewebsites.net/healthcheck/"
+if($response.StatusCode -eq 200)
+{
+  Write-Output "App deployed successfully. Browse to deployed website here: https://$appInstanceName.azurewebsites.net/"
+} 
+else
+{
+  Write-Output "Deployment has failed. App is unhealthy."
+}

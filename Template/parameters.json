@@ -2,9 +2,6 @@
     "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
     "contentVersion": "1.0.0.0",
     "parameters": {
-        "dbAdminUser": {
-            "value": "dbuser"
-        },
         "dbCores": {
             "value": 1
         },
@@ -17,17 +14,11 @@
         "postgreSqlVersion": {
             "value": "10"
         },
-        "dbName": {
-          "value": "app"
-        },
         "dbCollation": {
             "value": "en_US.utf8"
         },
         "dbCharset": {
             "value": "utf8"
-        },
-        "siteAction":{
-            "value": "updatedb -s"
         },
         "webPlanTier": {
             "value": "Free"

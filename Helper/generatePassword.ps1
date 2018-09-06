@@ -10,14 +10,13 @@ function Scramble-String([string]$inputString){
     $outputString = -join $scrambledStringArray
     return $outputString 
 }
- 
+
+function GeneratePassword
+{
 $password = Get-RandomCharacters -length 5 -characters 'abcdefghiklmnoprstuvwxyz'
 $password += Get-RandomCharacters -length 1 -characters 'ABCDEFGHKLMNOPRSTUVWXYZ'
 $password += Get-RandomCharacters -length 1 -characters '1234567890'
 $password += Get-RandomCharacters -length 1 -characters '!"§$%&/()=?}][{@#*+'
  
-Write-Host $password
- 
-$password = Scramble-String $password
- 
-Write-Host $password
+return [securestring](Scramble-String $password | ConvertTo-SecureString -AsPlainText -Force)
+}
