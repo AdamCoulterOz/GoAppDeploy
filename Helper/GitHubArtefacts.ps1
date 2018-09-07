@@ -1,3 +1,17 @@
+function DownloadArtefactForPlatform($platform,$folder)
+{
+  $saveFolder = "$folder/$platform"
+  New-Item -Path $saveFolder -ItemType directory
+  DownloadGitHubArtefact -Organisation "vibrato" `
+                         -Repository "TechTestApp" `
+                         -PackageName "TechTestApp_[ver]_$platform.zip" `
+                         -SavePath $saveFolder `
+                         -Unzip
+
+  Get-ChildItem -Path "$saveFolder\dist" -Recurse |  `
+      Move-Item -Destination $saveFolder
+  Remove-Item "$saveFolder\dist"
+}
 function GetGitHubArtefactLatestVersion ([string]$Organisation, [string]$Repository)
 {
   # PowerShell defaults to TLS 1.0, github needs TLS 1.2

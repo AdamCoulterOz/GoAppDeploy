@@ -4,6 +4,10 @@
     Requires that the Azure user running it has subscription provisioning rights.
 #>
 
+#******************************************************************************
+# 1 - Parameter Initialisation
+#******************************************************************************
+
 param(
  [Parameter(Mandatory=$True,`
    HelpMessage="ID of SUBSCRIPTION to deploy to.")]
@@ -40,32 +44,18 @@ param(
 $dbUsername = "dbuser"
 $dbName = "app"
 
+# Import helper functions
 . ./Helper/GitHubArtefacts.ps1
 . ./Helper/GeneratePassword.ps1
-. ./Helper/FtpUploadDirectory.ps1
+. ./Helper/WebDeploy.ps1
 
+# .NET Core implementation of securestring on mac & linux still buggy, so need to keep plain string for database initialisation later
 [string]$dbAdminPasswordPlain = GeneratePassword
 [securestring]$dbAdminPassword =  ConvertTo-SecureString $dbAdminPasswordPlain -AsPlainText -Force
-function downloadArtefactForPlatform($platform,$folder)
-{
-  $saveFolder = "$folder/$platform"
-  New-Item -Path $saveFolder -ItemType directory
-  DownloadGitHubArtefact -Organisation "vibrato" `
-                         -Repository "TechTestApp" `
-                         -PackageName "TechTestApp_[ver]_$platform.zip" `
-                         -SavePath $saveFolder `
-                         -Unzip
 
-  Get-ChildItem -Path "$saveFolder\dist" -Recurse |  `
-      Move-Item -Destination $saveFolder
-  Remove-Item "$saveFolder\dist"
-}
-
-#******************************************************************************
-# Basic Input Validation
-#******************************************************************************
 $ErrorActionPreference = "Stop"
 
+# Verify expected template scripts exist
 if((-Not (Test-Path $parametersFilePath)) `
     -Or (-Not (Test-Path $templateFilePath)))
 {
@@ -75,7 +65,7 @@ if((-Not (Test-Path $parametersFilePath)) `
 }
 
 #******************************************************************************
-# Host OS Validation
+# 2 - Host OS Validation
 #******************************************************************************
 # Determine OS Version
 $os = [Environment]::OSVersion.Platform
@@ -95,7 +85,7 @@ if(!$plat)
 }
 
 #******************************************************************************
-# Execution
+# 3 - Azure Template Deployment
 #******************************************************************************
 
 # Login to Azure Account
@@ -144,7 +134,7 @@ New-AzureRmResourceGroupDeployment  -ResourceGroupName $resourceGroupName `
                                     -dbName $dbName
 
 #******************************************************************************
-# Get & Stage Go App Deployment Files
+# 4 - Create Deployment Package
 #******************************************************************************
 
 Write-Host "Getting latest artefacts from Vibrato github..."
@@ -155,11 +145,19 @@ New-Item -Path ".\bin" -ItemType directory
 $appdirectory=Resolve-Path ".\bin"
 
 $deploymentPlatform = "win64"
-downloadArtefactForPlatform -platform $deploymentPlatform -folder $appdirectory
+DownloadArtefactForPlatform -platform $deploymentPlatform -folder $appdirectory
 Copy-Item ".\Config\web.config" -Destination "$appdirectory\$deploymentPlatform\"
 
+$sourceFolder = "$appdirectory/$deploymentPlatform"
+
+# zip the publish folder
+$destination = "$appdirectory/publish.zip"
+if(Test-path $destination) {Remove-item $destination}
+Add-Type -assembly "System.IO.Compression.FileSystem"
+[IO.Compression.ZipFile]::CreateFromDirectory($sourceFolder, $destination)
+
 #******************************************************************************
-# Deploy Go App Deployment Files
+# 5 - Deploy Package
 #******************************************************************************
 
 Write-Host "Download publishing profile..."
@@ -173,20 +171,11 @@ $baseXPath = "//publishProfile[@publishMethod=`"MSDeploy`"]"
 $username = $xml.SelectNodes("$baseXPath/@userName").value
 $password = $xml.SelectNodes("$baseXPath/@userPWD").value
 
-# Upload bin folder contents to wwwroot, maintaining folder structure
-
-$sourceFolder = "$appdirectory/$deploymentPlatform"
-
-# zip the publish folder
-$destination = "$appdirectory/publish.zip"
-if(Test-path $destination) {Remove-item $destination}
-Add-Type -assembly "System.IO.Compression.FileSystem"
-[IO.Compression.ZipFile]::CreateFromDirectory($sourceFolder, $destination)
-
+# Deploy using WebDeploy
 WebDeploy -username $username -password $password -zipPath $destination -appName $appInstanceName
 
 #******************************************************************************
-# Initialise Database
+# 6 - Initialise Database
 #******************************************************************************
 
 $env:VTT_DBUSER = "$dbUsername@$appInstanceName"
@@ -197,7 +186,7 @@ $env:VTT_DBHOST = "$appInstanceName.postgres.database.azure.com"
 $execPath = "./TechTestApp.exe"
 if(-Not ($plat -Eq "win64"))
 {
-  downloadArtefactForPlatform -platform $plat -folder $appdirectory
+  DownloadArtefactForPlatform -platform $plat -folder $appdirectory
   $execPath = "./TechTestApp"
   if($plat.StartsWith("win")) { $execPath += ".exe" }
 }
@@ -211,7 +200,7 @@ if(($plat -eq "darwin") -or ($plat -eq "linux64"))
 
 & $execPath "updatedb" "-s"
 #******************************************************************************
-# Restart Web App and Test Deployment
+# 7 - Restart Web App and Test Deployment
 #******************************************************************************
 Restart-AzureRmWebApp -ResourceGroupName $resourceGroupName `
                    -Name $appInstanceName
