@@ -13,7 +13,7 @@ param(
  [Parameter(Mandatory=$False,`
    HelpMessage="Name of RESOURCE GROUP to deploy to; cannot be existing.")]
  [string]
- $resourceGroupName="exam-app-adamc1",
+ $resourceGroupName="exam-app-adamc",
 
  [Parameter(Mandatory=$False,`
    HelpMessage="Name of LOCATION to deploy to; specified if resource group is new.")]
@@ -23,7 +23,7 @@ param(
  [Parameter(Mandatory=$False,`
    HelpMessage="Name for instance of application deployment; must be unique across Azure websites and contain only letters or numbers.")]
  [string]
- $appInstanceName="vibratotestapp1",
+ $appInstanceName="vibratotestapp",
 
  [Parameter(Mandatory=$False,`
    HelpMessage="Path to TEMPLATE file; specified if not template.json in Template folder.")]
@@ -44,7 +44,6 @@ $dbName = "app"
 . ./Helper/GeneratePassword.ps1
 . ./Helper/FtpUploadDirectory.ps1
 
-#[securestring]$dbAdminPassword = GeneratePassword
 [string]$dbAdminPasswordPlain = GeneratePassword
 [securestring]$dbAdminPassword =  ConvertTo-SecureString $dbAdminPasswordPlain -AsPlainText -Force
 function downloadArtefactForPlatform($platform,$folder)
@@ -204,6 +203,7 @@ if(-Not ($plat -Eq "win64"))
 }
 Set-Location "$appdirectory/$plat/"
 #ensure executeable has exec permission
+#this is needed because the .net core implemention of unzip doesnt retain exec permissions
 if(($plat -eq "darwin") -or ($plat -eq "linux64"))
 {
   chmod +x TechTestApp
