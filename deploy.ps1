@@ -13,7 +13,7 @@ param(
  [Parameter(Mandatory=$False,`
    HelpMessage="Name of RESOURCE GROUP to deploy to; cannot be existing.")]
  [string]
- $resourceGroupName="exam-app-adamc",
+ $resourceGroupName="exam-app-adamc1",
 
  [Parameter(Mandatory=$False,`
    HelpMessage="Name of LOCATION to deploy to; specified if resource group is new.")]
@@ -23,7 +23,7 @@ param(
  [Parameter(Mandatory=$False,`
    HelpMessage="Name for instance of application deployment; must be unique across Azure websites and contain only letters or numbers.")]
  [string]
- $appInstanceName="vibratotestapp",
+ $appInstanceName="vibratotestapp1",
 
  [Parameter(Mandatory=$False,`
    HelpMessage="Path to TEMPLATE file; specified if not template.json in Template folder.")]
@@ -44,7 +44,9 @@ $dbName = "app"
 . ./Helper/GeneratePassword.ps1
 . ./Helper/FtpUploadDirectory.ps1
 
-[securestring]$dbAdminPassword = GeneratePassword
+#[securestring]$dbAdminPassword = GeneratePassword
+[string]$dbAdminPasswordPlain = GeneratePassword
+[securestring]$dbAdminPassword =  ConvertTo-SecureString $dbAdminPasswordPlain -AsPlainText -Force
 function downloadArtefactForPlatform($platform,$folder)
 {
   $saveFolder = "$folder/$platform"
@@ -119,19 +121,18 @@ $resourceGroup = Get-AzureRmResourceGroup -Name $resourceGroupName `
 if($resourceGroup)
 {
   # Halt script because resource group name is already in use.
-  #Write-Error "Resource group with name '$resourceGroupName' is already in use. `
-  #              Halting deployment." -ErrorAction Stop
+  Write-Error "Resource group with name '$resourceGroupName' is already in use. `
+                Halting deployment." -ErrorAction Stop
 }
-else {
+else
+{
   # Create resource group in specified location
-Write-Host "Creating resource group '$resourceGroupName' `
-in location '$resourceGroupLocation'"
+  Write-Host "Creating resource group '$resourceGroupName' `
+  in location '$resourceGroupLocation'"
 
-New-AzureRmResourceGroup -Name $resourceGroupName `
-            -Location $resourceGroupLocation
+  New-AzureRmResourceGroup -Name $resourceGroupName `
+              -Location $resourceGroupLocation
 }
-
-
 
 # Start the deployment
 Write-Host "Starting deployment..."
@@ -168,26 +169,29 @@ $xml = [xml](Get-AzureRmWebAppPublishingProfile -Name $appInstanceName `
                                                 -ResourceGroupName $resourceGroupName)
 
 # Extract connection information from publishing profile
-$baseXPath = "//publishProfile[@publishMethod=`"FTP`"]"
+$baseXPath = "//publishProfile[@publishMethod=`"MSDeploy`"]"
 
 $username = $xml.SelectNodes("$baseXPath/@userName").value
 $password = $xml.SelectNodes("$baseXPath/@userPWD").value
-$url      = $xml.SelectNodes("$baseXPath/@publishUrl").value
 
 # Upload bin folder contents to wwwroot, maintaining folder structure
-$networkCredential = New-Object System.Net.NetworkCredential($username,$password)
+
 $sourceFolder = "$appdirectory/$deploymentPlatform"
 
-FTPUploadDirectory -FTPHost $url `
-                   -NetworkCredential $networkCredential `
-                   -SourceFolder $sourceFolder
+# zip the publish folder
+$destination = "$appdirectory/publish.zip"
+if(Test-path $destination) {Remove-item $destination}
+Add-Type -assembly "System.IO.Compression.FileSystem"
+[IO.Compression.ZipFile]::CreateFromDirectory($sourceFolder, $destination)
+
+WebDeploy -username $username -password $password -zipPath $destination -appName $appInstanceName
 
 #******************************************************************************
 # Initialise Database
 #******************************************************************************
 
 $env:VTT_DBUSER = "$dbUsername@$appInstanceName"
-$env:VTT_DBPASSWORD = $dbAdminPassword
+$env:VTT_DBPASSWORD = $dbAdminPasswordPlain
 $env:VTT_DBNAME = $dbName
 $env:VTT_DBHOST = "$appInstanceName.postgres.database.azure.com"
 
@@ -209,16 +213,24 @@ if(($plat -eq "darwin") -or ($plat -eq "linux64"))
 #******************************************************************************
 # Restart Web App and Test Deployment
 #******************************************************************************
-
 Restart-AzureRmWebApp -ResourceGroupName $resourceGroupName `
-                      -Name $appInstanceName
+                   -Name $appInstanceName
 
-$response = Invoke-WebRequest -Uri "https://$appInstanceName.azurewebsites.net/healthcheck/"
-if($response.StatusCode -eq 200)
+$passedTest = $False
+For ($i=0; $i -le 3; $i++)
 {
+  $response = Invoke-WebRequest -Uri "https://$appInstanceName.azurewebsites.net/healthcheck/" -TimeoutSec 10  -ErrorAction Ignore
+  if($response.StatusCode -eq 200)
+  {
+    $passedTest = $True
+    Break
+  }
+  Start-Sleep -Seconds 2
+}
+
+if($passedTest) {
   Write-Output "App deployed successfully. Browse to deployed website here: https://$appInstanceName.azurewebsites.net/"
-} 
-else
-{
-  Write-Output "Deployment has failed. App is unhealthy."
+}
+else {
+  Write-Error "There was a problem with the deployment."
 }

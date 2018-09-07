@@ -32,7 +32,7 @@ function DownloadGitHubArtefact([string]$Organisation,[string]$Repository,[strin
   # Download the file to specified location
   $output = "$SavePath/$packageName"
 
-  Write-Host "Attempting download of '$url' to '$output'."
+  Write-Host "Downloading '$url' to '$output'."
   Invoke-WebRequest -Uri $url -OutFile $output
 
   if($Unzip)

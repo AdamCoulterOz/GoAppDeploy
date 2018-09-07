@@ -18,5 +18,5 @@ $password += Get-RandomCharacters -length 1 -characters 'ABCDEFGHKLMNOPRSTUVWXYZ
 $password += Get-RandomCharacters -length 1 -characters '1234567890'
 $password += Get-RandomCharacters -length 1 -characters '!"§$%&/()=?}][{@#*+'
  
-return [securestring](Scramble-String $password | ConvertTo-SecureString -AsPlainText -Force)
+return [string](Scramble-String $password)
 }

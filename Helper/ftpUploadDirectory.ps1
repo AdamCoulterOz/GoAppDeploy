@@ -1,60 +1,14 @@
-
-function FTPUploadDirectory([string]$FTPHost,[System.Net.NetworkCredential]$NetworkCredential,[string]$SourceFolder)
+function WebDeploy([string]$username,[string]$password,[string]$zipPath,[string]$appName)
 {
-    $webclient = New-Object System.Net.WebClient
-    $webclient.Credentials = $NetworkCredential
+    $pair = "$($username):$($password)"
+    $encodedCreds = [System.Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes($pair))
+    $basicAuthValue = "Basic $encodedCreds"
 
-    $SrcEntries = Get-ChildItem $SourceFolder -Recurse
-    $Srcfolders = $SrcEntries | Where-Object{$_.PSIsContainer}
-    $SrcFiles = $SrcEntries | Where-Object{!$_.PSIsContainer}
+    $Headers = @{ Authorization = $basicAuthValue }
 
-    # Create Folders If Needed
-    foreach($folder in $Srcfolders)
-    {
-        $SrcFolderPath = $SourceFolder  -replace "\\","\\" -replace "\:","\:"
-        $DesFolder = $folder.Fullname -replace $SrcFolderPath,$FTPHost
-        $DesFolder = $DesFolder -replace "\\", "/"
-        # Write-Output $DesFolder
+    Resolve-Path $zipPath # this is what you want to go into wwwroot
 
-        try
-        {
-            $makeDirectory = [System.Net.WebRequest]::Create($DesFolder);
-            $makeDirectory.Credentials = $NetworkCredential
-            $makeDirectory.Method = [System.Net.WebRequestMethods+FTP]::MakeDirectory;
-            $makeDirectory.GetResponse();
-            #folder created successfully
-        }
-        catch [Net.WebException]
-        {
-            try
-            {
-                #if there was an error returned, check if folder already exists on server
-                $checkDirectory = [System.Net.WebRequest]::Create($DesFolder);
-                $checkDirectory.Credentials = $NetworkCredential
-                $checkDirectory.Method = [System.Net.WebRequestMethods+FTP]::PrintWorkingDirectory;
-                $response = $checkDirectory.GetResponse();
-                #folder already exists
-            }
-            catch [Net.WebException]
-            {
-                #some other error has occured
-            }
-        }
-    }
-
-    # Upload Files to correct folders
-    foreach($entry in $SrcFiles)
-    {
-        $SrcFullname = $entry.fullname
-        $SrcName = $entry.Name
-        $SrcFilePath = $SourceFolder -replace "\\","\\" -replace "\:","\:"
-        $DesFile = $SrcFullname -replace $SrcFilePath,$FTPHost
-        $DesFile = $DesFile -replace "\\", "/"
-        Write-Output "Destination: $DesFile"
-
-        $uri = New-Object System.Uri($DesFile)
-        #Write-Output $uri
-        Write-Output "Source: $SrcFullname"
-        Write-Output $webclient.UploadFile($uri, $SrcFullname)
-    }
+    # use kudu deploy from zip file
+    Invoke-WebRequest -Uri https://$appName.scm.azurewebsites.net/api/zipdeploy -Headers $Headers `
+        -InFile $zipPath -ContentType "multipart/form-data" -Method Post
 }
