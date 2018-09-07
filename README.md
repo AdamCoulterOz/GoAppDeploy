@@ -3,9 +3,12 @@
 This project is provided to complete the Vibrato Go Test App deployment technical test.
 
 ## Architecure
-The chosen cloud provider is Azure using the Azure PostgreSQL for the database and Azure App Services to host the Go App.
+The chosen cloud provider is Azure using:
+ 
+ * Azure Database for PostgreSQL to host the database
+ * Azure App Services to host the Go App
 
-The deployment scripts rely on Azure ARM templates plus PowerShell to perform execution. The PowerShell can be executed on Windows, macOS or Linux by using the AzureRM.NetCore library.
+The deployment scripts rely on Azure ARM templates plus PowerShell to perform execution. The PowerShell can be executed on Windows, macOS or Linux by using just the AzureRM.NetCore library and built-in PowerShell Core 6 modules.
 
 Please install PowerShell Core 6.0+ and the AzureRM.NetCore library before running the deployment script. PowerShell Core can be installed using the following instructions:
 
@@ -19,7 +22,7 @@ Then install the AzureRM.Core PowerShell module from a PWSH command prompt using
 Install-Module AzureRM.NetCore
 ```
 
-To run the app deployment, git clone this repo to your deployment machine and execute the following command from the root project folder context:
+To run the app deployment, git clone this repo to your deployment machine and execute the following command from the root project folder context (obviously with your target sub-id):
 
 ```powershell
 .\deploy.ps1 -subscriptionId "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
@@ -42,7 +45,6 @@ Some helper scripts support generic functions:
 
 Additional configuration had to be defined to run a GO app binary inside web app, due to it having a custom listener:
 * **web.config** - bootstraps custom listener daemons on Azure Web Apps - uses the IIS HttpPlatformHandler.
-* 
 
 
 ## Approach
@@ -87,7 +89,7 @@ While I was investigating the VSTS option, I realised the VSTS GO App build defi
 
 https://github.com/MicrosoftDocs/vsts-docs/issues/1527
 
-## Deployment Code ... Finally
+### Deployment Code ... Finally
 
 I have created this repo with the Azure ARM templates, and the PowerShell scripts needed to do the deployment.
 
@@ -101,7 +103,7 @@ Problem number ... 7? Found a bug with the HttpPlatformHandler now. When mapping
 
 https://github.com/vibrato/TechTestApp/issues/23
 
-## Azure ARM Templates
+### Azure ARM Templates
 
 I started by generating my initial template by going through the Azure Portal and configuring an Azure Web App + Azure Database for PostgreSQL deployment, and selecting to export the template. This was very basic and I had to almost re-write the whole thing. 
 
@@ -109,11 +111,11 @@ I was working on Windows at the time with AzureRM for Windows, but wanted to mov
 
 I spent an enormous amount of time figuring out the cleanest way to create the database instance (as I couldnt use the GO app as it's implementation of updatedb wasn't compatible with Azure PostgreSQL due to trying to Issue 19). I went as far as to setup ODBC drivers and other PowerShell modules trying to make it easy to install. I then realised I could define an additional resource in the ARM template which would create the database for me too. Score.
 
-## Deployment of Code
+### Deployment of Code
 
 Now the ARM template was working perfectly, I just needed to to deploy the code. I thought this would be easy using FTP, but seems not. Microsoft's FTP service for code deployment randomly "not logged in" errors inconsistently. I couldn't figure out the source of the problem even after changing the implementation to 3 different libraries. I gave up and found a new way to do it using the ZipDeploy API which is significantly more stable.
 
-## Database Initialisation
+### Database Initialisation
 
 I was very thoughtful about this, I couldn't run the GoApp "updatedb -s" command from the website itself as it would create a race condition when there are multiple nodes. I also didn't want to run it locally as then I would need to potentially get a different version of the GO binary based on what platform I was executing from. In the end there wasn't an easy way around it so I run it it locally by downloading the additional binary for mac or linux if the script is not running on Windows. 
 
