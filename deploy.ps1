@@ -49,7 +49,8 @@ $dbName = "app"
 . ./Helper/GeneratePassword.ps1
 . ./Helper/WebDeploy.ps1
 
-# .NET Core implementation of securestring on mac & linux still buggy, so need to keep plain string for database initialisation later
+# .NET Core implementation of securestring on mac & linux still buggy, 
+# so need to keep plain string for database initialisation later
 [string]$dbAdminPasswordPlain = GeneratePassword
 [securestring]$dbAdminPassword =  ConvertTo-SecureString $dbAdminPasswordPlain -AsPlainText -Force
 
