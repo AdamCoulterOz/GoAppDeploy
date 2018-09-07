@@ -8,6 +8,8 @@ The chosen cloud provider is Azure using:
  * Azure Database for PostgreSQL to host the database
  * Azure App Services to host the Go App
 
+Azure Database for PostgreSQL and App Services both provide high-availability and scaling. I've selected the cheapest / free implementations of both for this template, but can be upgraded to auto-scale and have location redundancy by modifying some of the values in the Template Parameters file.
+
 The deployment scripts rely on Azure ARM templates plus PowerShell to perform execution. The PowerShell can be executed on Windows, macOS or Linux by using just the AzureRM.NetCore library and built-in PowerShell Core 6 modules.
 
 Please install PowerShell Core 6.0+ and the AzureRM.NetCore library before running the deployment script. PowerShell Core can be installed using the following instructions:
